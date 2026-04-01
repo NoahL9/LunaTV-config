@@ -1,0 +1,40 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    # 定时任务：每天 UTC 时间 0 点执行（即北京时间早上8点）
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # 必须带上 token 才能 push
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream repository
+        run: |
+          git remote add upstream ${{ secrets.UPSTREAM_REPO }}
+          git fetch upstream
+
+      - name: Sync branches
+        run: |
+          # 获取当前分支名（通常是 main 或 master）
+          BRANCH=$(git branch --show-current)
+          
+          # 合并上游分支
+          git merge upstream/$BRANCH --allow-unrelated-histories --no-edit
+          
+          # 推送到 origin (你的 fork)
+          git push origin $BRANCH
